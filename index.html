@@ -3,106 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Hand Gesture Widgets</title>
+<title>Widget Screen</title>
 <link rel="shortcut icon" href="icon.png" type="image/x-icon">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;800&display=swap" rel="stylesheet">
-
-<style>
-:root {
-  --accent: #b361ee;
-}
-body {
-  font-family: 'Manrope', sans-serif;
-  background: #050510;
-  overflow: hidden;
-}
-.glass {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-.accent { color: var(--accent); }
-.accent-bg { background: var(--accent); }
-.accent-glow {
-  box-shadow: 0 0 30px color-mix(in srgb, var(--accent), transparent 60%);
-}
-
-/* MIRROR VIDEO + CANVAS */
-video, canvas {
-  transform: scaleX(-1);
-}
-</style>
-</head>
-
-<body class="text-white">
-
-<canvas id="gestureCanvas"
-  style="position:fixed; inset:0; pointer-events:none; z-index:999;">
-</canvas>
-
-<!-- WEBCAM -->
-<video id="webcam" autoplay muted playsinline
-class="fixed inset-0 w-full h-full object-cover opacity-25 -z-10"></video>
-
-<div class="absolute inset-0 bg-black/40 -z-10"></div>
-
-<!-- MAIN GRID -->
-<div class="h-screen p-10 grid grid-cols-12 gap-8 relative">
-
-<div class="col-span-5 glass rounded-3xl p-10 flex flex-col justify-center widget">
-  <div id="clock" class="text-8xl font-extralight accent"></div>
-  <div id="date" class="mt-3 tracking-widest uppercase text-white/60"></div>
-</div>
-
-<div class="col-span-3 glass rounded-3xl p-8 flex flex-col gap-6 widget">
-  <h2 class="uppercase tracking-widest text-sm text-white/50">Focus Timer</h2>
-  <div id="timerDisplay" class="text-5xl font-bold">25:00</div>
-  <div class="flex gap-4">
-    <button onclick="startTimer()" class="accent-bg px-6 py-3 rounded-xl accent-glow">Start</button>
-    <button onclick="resetTimer()" class="glass px-6 py-3 rounded-xl">Reset</button>
-  </div>
-</div>
-
-<div class="col-span-4 glass rounded-3xl p-8 flex flex-col gap-6 widget">
-  <h2 class="uppercase tracking-widest text-sm text-white/50">Stopwatch</h2>
-  <div id="stopwatch" class="text-5xl font-bold">00:00.0</div>
-  <div class="flex gap-4">
-    <button onclick="startStopwatch()" class="accent-bg px-6 py-3 rounded-xl">Start</button>
-    <button onclick="stopStopwatch()" class="glass px-6 py-3 rounded-xl">Stop</button>
-    <button onclick="resetStopwatch()" class="glass px-6 py-3 rounded-xl">Reset</button>
-  </div>
-</div>
-
-<div class="col-span-5 glass rounded-3xl p-8 flex flex-col widget">
-  <h2 class="uppercase tracking-widest text-sm text-white/50 mb-4">Notes</h2>
-  <textarea id="notes"
-    class="flex-1 bg-transparent resize-none outline-none text-white placeholder-white/30"
-    placeholder="Write something..."></textarea>
-</div>
-
-<div class="col-span-4 glass rounded-3xl p-8 flex flex-col gap-6 widget">
-  <h2 id="calendarTitle" class="uppercase tracking-widest text-sm text-white/50"></h2>
-  <div class="grid grid-cols-7 gap-2 text-center text-xs text-white/40">
-    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
-    <div>Thu</div><div>Fri</div><div>Sat</div>
-  </div>
-  <div id="calendarGrid" class="grid grid-cols-7 gap-2 text-center"></div>
-</div>
-
-<div class="col-span-3 glass rounded-3xl p-8 flex flex-col gap-4 widget">
-  <h2 class="uppercase tracking-widest text-sm text-white/50">Accent</h2>
-  <div class="flex gap-4">
-    <button onclick="setAccent('#f97316')" class="w-8 h-8 rounded-full bg-orange-500"></button>
-    <button onclick="setAccent('#022255')" class="w-8 h-8 rounded-full bg-blue-900"></button>
-    <button onclick="setAccent('#044325')" class="w-8 h-8 rounded-full bg-green-900"></button>
-    <button onclick="setAccent('#8b0418')" class="w-8 h-8 rounded-full bg-red-900"></button>
-  </div>
-</div>
-
-</div>
-
-<script src="app.js"></script>
 
 <script type="module">
 import {
@@ -114,20 +18,13 @@ const video = document.getElementById("webcam");
 const canvas = document.getElementById("gestureCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 let handLandmarker;
 let lastVideoTime = -1;
-
 let grabbing = false;
 let activeWidget = null;
-
-// smoothed hand position
 let smoothX = canvas.width / 2;
 let smoothY = canvas.height / 2;
 
@@ -135,7 +32,7 @@ function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-async function setup() {
+async function setupGestures() {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
   );
@@ -152,57 +49,33 @@ async function setup() {
 
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
-
   video.addEventListener("loadeddata", predict);
 }
 
 function predict() {
   if (video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
+    const results = handLandmarker.detectForVideo(video, performance.now());
 
-    const results = handLandmarker.detectForVideo(
-      video,
-      performance.now()
-    );
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (results.landmarks && results.landmarks.length > 0) {
+    if (results.landmarks?.length) {
       const lm = results.landmarks[0];
       const index = lm[8];
       const thumb = lm[4];
 
-      if (!index || !thumb) {
-        grabbing = false;
-        activeWidget = null;
-        requestAnimationFrame(predict);
-        return;
-      }
+      const x = (1 - index.x) * window.innerWidth;
+      const y = index.y * window.innerHeight;
 
-      
-      const rawX = (1 - index.x) * canvas.width;
-      const rawY = index.y * canvas.height;
-
-      // smoothing
-      smoothX += (rawX - smoothX) * 0.3;
-      smoothY += (rawY - smoothY) * 0.3;
+      smoothX += (x - smoothX) * 0.3;
+      smoothY += (y - smoothY) * 0.3;
 
       const pinch = dist(index, thumb) < 0.05;
 
-      // grab start
       if (pinch && !grabbing) {
         grabbing = true;
-
         document.querySelectorAll(".widget").forEach(w => {
           const r = w.getBoundingClientRect();
-          if (
-            smoothX > r.left &&
-            smoothX < r.right &&
-            smoothY > r.top &&
-            smoothY < r.bottom
-          ) {
+          if (smoothX > r.left && smoothX < r.right && smoothY > r.top && smoothY < r.bottom) {
             activeWidget = w;
-
             if (!w.dataset.dragged) {
               w.dataset.dragged = "true";
               w.style.position = "absolute";
@@ -214,33 +87,138 @@ function predict() {
         });
       }
 
-      // dragging
       if (grabbing && activeWidget) {
-        activeWidget.style.left =
-          smoothX - activeWidget.offsetWidth / 2 + "px";
-        activeWidget.style.top =
-          smoothY - activeWidget.offsetHeight / 2 + "px";
+        activeWidget.style.left = smoothX - activeWidget.offsetWidth / 2 + "px";
+        activeWidget.style.top = smoothY - activeWidget.offsetHeight / 2 + "px";
         activeWidget.style.zIndex = 200;
       }
 
-      // release
       if (!pinch) {
         grabbing = false;
         activeWidget = null;
       }
-    } else {
-      grabbing = false;
-      activeWidget = null;
     }
   }
-
   requestAnimationFrame(predict);
 }
-
-setup();
+setupGestures();
 </script>
 
+<style>
+:root { --accent: #f97316; }
+body {
+  font-family: 'Manrope', sans-serif;
+  background: #050510;
+  overflow: hidden;
+}
+.glass {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.accent { color: var(--accent); }
+.accent-bg { background: var(--accent); }
+.accent-glow { box-shadow: 0 0 30px color-mix(in srgb, var(--accent), transparent 60%); }
+video, canvas { transform: scaleX(-1); }
 
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { 
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* calendar hover */
+.calendar-day {
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.calendar-day:hover {
+  transform: scale(1.1);
+}
+</style>
+</head>
+
+<body class="text-white">
+
+<canvas id="gestureCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+<video id="webcam" autoplay muted playsinline
+class="fixed inset-0 w-full h-full object-cover opacity-25 -z-10"></video>
+<div class="absolute inset-0 bg-black/40 -z-10"></div>
+
+<div class="h-screen p-10 grid grid-cols-12 gap-8 relative">
+
+<!-- CLOCK -->
+<div class="col-span-5 glass rounded-3xl p-10 flex flex-col justify-center widget">
+  <div id="clock" class="text-8xl font-extralight accent"></div>
+  <div id="date" class="mt-3 tracking-widest uppercase text-white/60"></div>
+</div>
+
+<!-- TIMER -->
+<div class="col-span-3 glass rounded-3xl p-8 flex flex-col gap-4 widget">
+  <h2 class="uppercase tracking-widest text-sm text-white/50">Timer</h2>
+  <input id="timerInput" type="number" min="1"
+    class="glass px-3 py-2 rounded-xl bg-transparent text-white outline-none"
+    placeholder="Minutes">
+  <div id="timerDisplay" class="text-5xl font-bold">00:00</div>
+  <div class="flex gap-4">
+    <button onclick="startTimer()" class="accent-bg px-5 py-2 rounded-xl">Start</button>
+    <button onclick="resetTimer()" class="glass px-5 py-2 rounded-xl">Reset</button>
+  </div>
+</div>
+
+<!-- STOPWATCH -->
+<div class="col-span-4 glass rounded-3xl p-8 flex flex-col gap-4 widget">
+  <h2 class="uppercase tracking-widest text-sm text-white/50">Stopwatch</h2>
+  <div id="stopwatch" class="text-5xl font-bold">00:00</div>
+  <div class="flex gap-4">
+    <button onclick="startSW()" class="accent-bg px-5 py-2 rounded-xl">Start</button>
+    <button onclick="stopSW()" class="glass px-5 py-2 rounded-xl">Stop</button>
+    <button onclick="resetSW()" class="glass px-5 py-2 rounded-xl">Reset</button>
+  </div>
+</div>
+
+<!-- NOTES -->
+<div class="col-span-5 glass rounded-3xl p-8 flex flex-col widget">
+  <h2 class="uppercase tracking-widest text-sm text-white/50 mb-4">Notes</h2>
+  <textarea id="notes" class="flex-1 bg-transparent outline-none resize-none"></textarea>
+</div>
+
+<!-- CALENDAR -->
+<div class="col-span-4 glass rounded-3xl p-8 widget">
+  <h2 id="calendarTitle" class="uppercase tracking-widest text-sm text-white/50 mb-4"></h2>
+  <div class="grid grid-cols-7 gap-2 text-xs text-center text-white/40">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+    <div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+  <div id="calendarGrid" class="grid grid-cols-7 gap-2 mt-2 text-center"></div>
+</div>
+
+<!-- ACCENT COLORS -->
+<div class="col-span-3 glass rounded-3xl p-8 flex flex-col gap-4 widget">
+  <h2 class="uppercase tracking-widest text-sm text-white/50">Accent</h2>
+  <div class="flex gap-3 flex-wrap">
+    <button onclick="setAccent('#f97316')" class="w-7 h-7 rounded-full bg-orange-500"></button>
+    <button onclick="setAccent('#22c55e')" class="w-7 h-7 rounded-full bg-green-500"></button>
+    <button onclick="setAccent('#3b82f6')" class="w-7 h-7 rounded-full bg-blue-500"></button>
+    <button onclick="setAccent('#ec4899')" class="w-7 h-7 rounded-full bg-pink-500"></button>
+    <button onclick="setAccent('#a855f7')" class="w-7 h-7 rounded-full bg-purple-500"></button>
+    <button onclick="setAccent('#facc15')" class="w-7 h-7 rounded-full bg-yellow-400"></button>
+    <button onclick="setAccent('#022255')" class="w-7 h-7 rounded-full bg-blue-900"></button>
+    <button onclick="setAccent('#044325')" class="w-7 h-7 rounded-full bg-green-900"></button>
+    <button onclick="setAccent('#8b0418')" class="w-7 h-7 rounded-full bg-red-900"></button>
+  </div>
+  </div>
+</div>
+
+</div>
+
+<audio id="alarm" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"></audio>
+
+<script  src="app.js"></script>
 
 </body>
 </html>
